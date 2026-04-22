@@ -1,0 +1,4 @@
+predibase
+datasets
+pandas
+python-dotenv
