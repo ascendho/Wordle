@@ -1,6 +1,10 @@
 # Wordle Model Fine-tuning Pipeline
 
-This Python repository modularizes the Wordle Supervised Fine-Tuning (SFT) and Generative Reward Policy Optimization (GRPO) implementation built on Predibase and Qwen 2.5 7B Instruct. It replicates the course configuration under standard Python `src-layout` project bounds.
+This Python repository modularizes the Wordle Supervised Fine-Tuning (SFT) and Generative Reward Policy Optimization (GRPO) implementation built on Predibase and Qwen 2.5 7B Instruct.
+
+The project uses a hybrid layout:
+- Root level keeps pipeline actions (`main.py`, `train/`, `eval/`) easy to access.
+- `src/` contains reusable shared modules (`data/`, `rewards/`, `utils/`).
 
 ## Requirements
 1. Copy `.env.example` -> `.env` and fill your `PREDIBASE_API_KEY`
@@ -8,6 +12,27 @@ This Python repository modularizes the Wordle Supervised Fine-Tuning (SFT) and G
 
 ## Execution via `main.py`
 The project relies on `main.py` acting as an endpoint for all operations.
+
+## Project Structure
+```text
+.
+├── main.py
+├── train/
+│   ├── sft.py
+│   ├── grpo.py
+│   └── sftgrpo.py
+├── eval/
+│   └── evaluate.py
+└── src/
+	├── data/
+	│   └── loader.py
+	├── rewards/
+	│   ├── format.py
+	│   ├── feedback.py
+	│   └── entropy.py
+	└── utils/
+		└── config.py
+```
 
 **1. Data Loading**
 Cache HuggingFace Datasets onto Predibase:
@@ -26,7 +51,7 @@ python main.py --run train --type sftgrpo --adapter wordle/1
 ```
 
 **3. Benchmark & Evaluate**
-Simulates evaluation calculation to extract Solved Rates & Guesses constraints:
+Run evaluation logic to compute solved games and average guesses from model outputs:
 ```bash
 python main.py --run eval --adapter wordle/1
 ```

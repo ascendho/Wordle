@@ -1,6 +1,6 @@
 from predibase import SFTConfig
-from utils.config import get_predibase_client
-from data.loader import get_wordle_sft_dataset
+from src.utils.config import get_predibase_client
+from src.data.loader import get_wordle_sft_dataset
 
 def run_sft_training():
     """Execute pure Supervised Fine-Tuning using the Wordle SFT dataset."""

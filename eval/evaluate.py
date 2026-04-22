@@ -1,6 +1,8 @@
 import pandas as pd
 import re
-from utils.config import get_predibase_client
+import ast
+
+from src.utils.config import get_predibase_client
 
 def extract_guess(completion: str) -> str:
     """Helper to extract the string inside <guess> tags."""
@@ -8,6 +10,28 @@ def extract_guess(completion: str) -> str:
     if match:
         return match.group(1).strip()
     return ""
+
+
+def extract_secret_word(example_row: pd.Series) -> str:
+    """Try common field names used for target word labels in Wordle datasets."""
+    for key in ("secret", "target", "answer", "word", "secret_word"):
+        value = example_row.get(key)
+        if isinstance(value, str) and len(value.strip()) == 5:
+            return value.strip().upper()
+    return ""
+
+
+def safe_history_len(raw_history) -> int:
+    """Parse past_guess_history safely and return the number of previous guesses."""
+    if isinstance(raw_history, list):
+        return len(raw_history)
+    if not isinstance(raw_history, str) or not raw_history.strip():
+        return 0
+    try:
+        parsed = ast.literal_eval(raw_history)
+        return len(parsed) if isinstance(parsed, list) else 0
+    except Exception:
+        return 0
 
 def run_evaluation(adapter_id: str):
     """
@@ -40,7 +64,10 @@ def run_evaluation(adapter_id: str):
         print(f"Executing {total_games} Wordle prediction tests...")
         for index, row in df.iterrows():
             prompt = row['prompt']
-            EXPECTED_SECRET = "HELLO" # Simplified secret verification
+            expected_secret = extract_secret_word(row)
+            if not expected_secret:
+                # Skip rows without an explicit target word; they cannot be scored for solved rate.
+                continue
             
             # 3. Call the inference endpoint
             response = adapter.generate(
@@ -54,9 +81,9 @@ def run_evaluation(adapter_id: str):
             guess = extract_guess(completion)
             
             # Simple check logic for demonstration
-            if guess.upper() == EXPECTED_SECRET:
+            if guess.upper() == expected_secret:
                 solved_count += 1
-                guesses_in_solved.append(len(eval(row.get('past_guess_history', '[]'))) + 1)
+                guesses_in_solved.append(safe_history_len(row.get('past_guess_history')) + 1)
         
         avg_guesses = sum(guesses_in_solved) / len(guesses_in_solved) if guesses_in_solved else 0.0
 

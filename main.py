@@ -1,5 +1,4 @@
 import argparse
-import sys
 
 def main():
     parser = argparse.ArgumentParser(description="Wordle SFT/GRPO Fine-Tuning Pipeline CLI")
@@ -32,8 +31,8 @@ def main():
     if args.run == "data":
         print("Preparing datasets for Wordle...")
         # Local Imports
-        from utils.config import get_predibase_client
-        from data.loader import get_wordle_grpo_dataset, get_wordle_sft_dataset
+        from src.utils.config import get_predibase_client
+        from src.data.loader import get_wordle_grpo_dataset, get_wordle_sft_dataset
         
         pb = get_predibase_client()
         get_wordle_sft_dataset(pb)
