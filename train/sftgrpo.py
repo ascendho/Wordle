@@ -7,25 +7,28 @@ from predibase import (
 from src.utils.config import get_predibase_client
 from src.data.loader import get_wordle_grpo_dataset
 
-# Import local standard reward functions from the new path
+# 引入强化学习的打分环境/奖励函数
 from src.rewards.format import output_format_check
 from src.rewards.feedback import uses_previous_feedback
 from src.rewards.entropy import guess_value
 
 def run_sft_grpo_training(sft_version: str = "wordle/1"):
     """
-    Run GRPO training initialized from a previous SFT checkpoint.
+    SFT + GRPO 联合训练流程。
+    从一个先前执行过部分 SFT 微调的网络权重（Checkpoint）继续启动 GRPO 策略，
+    这样网络在早期不会过于盲目瞎猜。
+    
+    参数:
+        sft_version (str): 选择之前完成 SFT 版本适配器字符串标识，比如 wordle/1
     """
+    # 建立与云服务平台连接
     pb = get_predibase_client()
     
-    # We use the GRPO training dataset
+    # 拉取训练 RL 使用的情境数据分布
     dataset = get_wordle_grpo_dataset(pb)
-    
-    # Ensure the repository exists
     pb.repos.create(name="wordle", exists_ok=True)
     
-    # Setup GRPO config but with different parameters (e.g. fewer generations) 
-    # to continue training right after an SFT job completes
+    # 建立奖励及调度配置，相较于纯净起点的 GRPO，这里会加速迭代并调低 epoch 跟 generation 并发
     config = GRPOConfig(
         base_model="qwen2-5-7b-instruct",
         reward_fns=RewardFunctionsConfig(
@@ -42,12 +45,12 @@ def run_sft_grpo_training(sft_version: str = "wordle/1"):
         num_generations=8
     )
     
-    # Notice we pass 'continue_from_version' with our provided specific sft version
+    # 建立作业：重点传入 continue_from_version 让底层权重承接之前的结果！
     job = pb.finetuning.jobs.create(
         config=config,
-        continue_from_version=sft_version, # Set based on SFT generation output
+        continue_from_version=sft_version, # 接力设定：从 SFT checkpoint 继承权重继续
         dataset=dataset,
         repo="wordle",
-        description="Wordle SFT+GRPO"
+        description="Wordle SFT+GRPO 混合训练任务"
     )
-    print(f"SFT+GRPO Training Job from {sft_version} created! Job ID: {getattr(job, 'id', 'Unknown')}")
+    print(f"基于 {sft_version} 的联合强化训练 SFT+GRPO 任务已触发！ Job ID: {getattr(job, 'id', 'Unknown')}")
