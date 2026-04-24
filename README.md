@@ -50,14 +50,7 @@
 
 对比多个流行大模型与我们自行微调的模型，基准表现如下：
 
-| 模型方案                               | 成功通关数 (10 局制) | 获胜组内平均猜词数 |
-| :------------------------------------- | :------------------: | :----------------: |
-| *GPT-4o-mini*                          |          1           |         4          |
-| *Claude 3.5 Sonnet*                    |          8           |         4          |
-| *Claude 3.7 Sonnet Thinking (8K Budget)* |        10          |        3.9         |
-| Instruct                               |          0           |         6          |
-| Instruct + GRPO                        |          3           |         4          |
-| **Instruct + SFT + GRPO**              |        **7**         |       **4**        |
+<img src="assets/benchmark.png"></img>
 
 **注**：Instruct = *Qwen 2.5 7B Instruct*
 
