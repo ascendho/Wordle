@@ -1,3 +1,5 @@
+"""Wordle benchmark runner: execute full multi-turn games and summarize solved-rate metrics."""
+
 import pandas as pd
 import re
 
@@ -75,6 +77,7 @@ def _build_turn_prompt(base_prompt: str, history: list) -> str:
 
 def _call_adapter(adapter, prompt: str, temperature: float, max_new_tokens: int):
     """兼容不同 Predibase SDK 版本的 generate 接口。"""
+    # 新版 SDK 支持 temperature；若调用签名较旧，则回退到只传基础生成参数。
     try:
         return adapter.generate(
             prompt=prompt,
@@ -95,11 +98,20 @@ def _play_single_game(
     temperature: float,
     max_new_tokens: int,
 ) -> dict:
-    """对单个 secret 执行最多 6 轮的完整 Wordle 对局。"""
+    """
+    对单个 secret 执行最多 6 轮的完整 Wordle 对局。
+
+    返回结果既包含是否通关，也包含停止原因：
+    - `solved`: 在 6 轮内命中答案
+    - `missing_guess_turn_k`: 模型没有按约定产出 `<guess>`
+    - `malformed_guess_turn_k`: 产出的猜词不是合法五字母字母串
+    - `exhausted`: 每轮都合法，但六次机会仍未猜中
+    """
     history: list = []
     reason = "exhausted"
 
     for turn in range(1, MAX_TURNS + 1):
+        # 每一轮都把最新历史重新拼回 prompt，模拟真实 Wordle 中“看完反馈再猜下一次”。
         prompt = _build_turn_prompt(base_prompt, history)
         response = _call_adapter(adapter, prompt, temperature, max_new_tokens)
         completion = response.generated_text if hasattr(response, "generated_text") else str(response)
@@ -158,6 +170,8 @@ def run_benchmark(
         dataset = pb.datasets.get("wordle_grpo_data")
         df = dataset.to_pandas()
 
+        # 数据集中可能包含同一个 secret 的多条样本；benchmark 只保留每个答案一局，
+        # 否则成功率会被重复 secret 放大。
         secret_cols = [c for c in ("secret", "target", "answer", "word", "secret_word") if c in df.columns]
         if secret_cols:
             df = df.drop_duplicates(subset=secret_cols[:1])
@@ -201,8 +215,10 @@ def run_benchmark(
                 solved_count += 1
                 guesses_in_solved.append(result["turns"])
             else:
+                # 失败原因单独计数，便于区分“策略猜不中”与“输出结构出错”等不同问题。
                 failure_reasons[result["reason"]] = failure_reasons.get(result["reason"], 0) + 1
 
+        # 平均猜词次数只在获胜局上统计，和 README/配图中的指标口径保持一致。
         avg_guesses = sum(guesses_in_solved) / len(guesses_in_solved) if guesses_in_solved else 0.0
         results = {
             "Model": adapter_id,
