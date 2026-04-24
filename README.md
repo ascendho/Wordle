@@ -38,19 +38,17 @@
 
 ### 1. 带有 Few-shot 示例注入的 SFT 策略
 
-SFT 训练数据来源于 [wordle-sft](https://huggingface.co/datasets/predibase/wordle-sft)，具体数据格式见<a href="assets/wordle-sft.png">图</a>。
-
 我们通过 SFT 为模型构建了“先思考、后输出”的行为模式：利用结构化标签定义输出规范，解决了解析难题；通过思维链训练，赋予模型解析 Wordle 反馈并进行逻辑推导的能力。然后，微调过程严控了游戏规则约束（如词长、反馈对齐），显著降低了模型幻觉。最终，模型从发散的通用 AI 进化为具备深度策略意识的 Wordle 游戏专家。
 
 ### 2. 集成多维奖励函数反馈的 GRPO 策略优化
 
-GRPO 训练数据来源于 [wordle-grpo](https://huggingface.co/datasets/predibase/wordle-grpo)，具体数据格式见<a href="assets/wordle-grpo.png">图</a>。
-
 在 SFT 奠定的基础上，我们利用 **GRPO（组相对策略优化）** 让模型从“死记硬背”转向“实战博弈”。这一阶段不再提供标准答案（secret 仅奖励函数可见），而是通过设置格式校验、逻辑一致性以及信息熵等奖励函数，引导模型在自主生成中优化猜测路径。通过对同一 Prompt 下的多组回答进行群体相对评分，模型学会了在思考过程中主动核对历史反馈，动态剔除逻辑矛盾。
+
+**注**：SFT 训练数据来源于 [wordle-sft](https://huggingface.co/datasets/predibase/wordle-sft)，具体数据格式见<a href="assets/wordle-sft.png">图</a>；GRPO 训练数据来源于 [wordle-grpo](https://huggingface.co/datasets/predibase/wordle-grpo)，具体数据格式见<a href="assets/wordle-grpo.png">图</a>。
 
 ## 基准测试
 
-对比多个流行大模型与我们自行微调的模型基准表现如下：
+对比多个流行大模型与我们自行微调的模型，基准表现如下：
 
 | 模型方案                               | 成功通关数 (10 局制) | 获胜组内平均猜词数 |
 | :------------------------------------- | :------------------: | :----------------: |
