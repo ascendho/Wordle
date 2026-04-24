@@ -15,7 +15,7 @@ from src.rewards.entropy import guess_value
 def run_sft_grpo_training(sft_version: str = "wordle/1"):
     """
     SFT + GRPO 联合训练流程。
-    从一个先前执行过部分 SFT 微调的网络权重（Checkpoint）继续启动 GRPO 策略，
+    从一个先前执行过部分 SFT 微调的网络权重继续启动 GRPO 策略，
     这样网络在早期不会过于盲目瞎猜。
     
     参数:

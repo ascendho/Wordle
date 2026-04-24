@@ -2,7 +2,7 @@ import argparse
 
 def main():
     """主入口函数：解析命令行参数并调度对应的子模块任务"""
-    parser = argparse.ArgumentParser(description="Wordle SFT/GRPO 微调流程 CLI (Wordle Fine-Tuning Pipeline CLI)")
+    parser = argparse.ArgumentParser(description="Wordle SFT/GRPO 微调流程")
     
     # 定义要运行的阶段
     parser.add_argument(
@@ -10,7 +10,7 @@ def main():
         type=str, 
         choices=["data", "train", "eval"], 
         required=True,
-        help="要运行的流水线阶段：准备目标数据 (data), 执行训练 (train), 或运行评估基准 (eval)。"
+        help="要运行的流水线阶段：准备目标数据, 执行训练, 或运行评估基准。"
     )
     
     # 针对训练阶段，指定训练类型

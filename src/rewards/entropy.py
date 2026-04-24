@@ -1,5 +1,3 @@
-# Reward function that computes normalized information gain of the guess, i.e.,
-# does the new guess reduce the uncertainty of the secret word the most
 def guess_value(prompt: str, completion: str, example: dict) -> float:
     """
     奖励函数：计算最新猜词的信息增益熵（即猜测能够最大化减少对目标词的不确定性）。
@@ -27,8 +25,8 @@ def guess_value(prompt: str, completion: str, example: dict) -> float:
         past_guess_history = ast.literal_eval(example["past_guess_history"])
         
         # 警告说明：
-        # 完整的实际熵值信息增益计算(Information Gain)需求依赖单词表并针对每一种分布
-        # 执行庞大的过滤逻辑。为防止环境评估计算严重阻塞耗时导致失控，
+        # 完整的实际熵值信息增益计算需求依赖单词表并针对每一种分布执行庞大的过滤逻辑。
+        # 为防止环境评估计算严重阻塞耗时导致失控，
         # 这个版本保留了奖励签名的外壳机制，在教程和此精简闭环内提供一个默认通过值 1.0。
         
         # 返回静态基础奖励，使 RL 过程能够平滑往下运行。

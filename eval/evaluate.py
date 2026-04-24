@@ -40,7 +40,7 @@ def safe_history_len(raw_history) -> int:
 def run_evaluation(adapter_id: str):
     """
     主评估执行逻辑：
-    抽入部分的测试集问题用我们的已微调模型或策略接口进行生成推理（Inference）,
+    抽入部分的测试集问题用我们的已微调模型或策略接口进行生成推理,
     将模型真实给出的输出答卷与底层隐藏真实词对比，
     输出通关率统计结果与平均推理步数。
     """

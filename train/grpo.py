@@ -26,21 +26,25 @@ def run_grpo_training():
     # 确保云空间有实验跟踪库
     pb.repos.create(name="wordle", exists_ok=True)
     
-    # 装配 GRPO 参数环境，绑定相关的奖励指标评估函数群 (Reward Matrix)
+    # 装配 GRPO 参数环境，绑定相关的奖励函数
     config = GRPOConfig(
         base_model="qwen2-5-7b-instruct",
         reward_fns=RewardFunctionsConfig(
-            # 定义环境依赖由于我们需要在其中进行 list 和 pandas 规则对比排查
             runtime=RewardFunctionsRuntimeConfig(packages=["pandas"]),
             functions={
                 "output_format_check": output_format_check,        # 检查指令格式是否严格服从规范
-                "uses_previous_feedback": uses_previous_feedback,    # 检查是否善用了前一步给予的线索
+                "uses_previous_feedback": uses_previous_feedback,  # 检查是否善用了前一步给予的线索
                 "guess_value": guess_value,                        # 验证猜测熵信息效率增益
             }
         ),
+
         # 控制每次采样大小，避免陷入冗长思考链
         sampling_params=SamplingParamsConfig(max_tokens=4096),
-        num_generations=16 # batch sizes：执行一次反馈生成的独立并发搜索数量
+
+        # GRPO 的核心特征。
+        # 对于每一个游戏状态，模型会一口气生成 8 种不同的思考过程和猜测结果。
+        # GRPO 会在这 8 个结果中进行内部“选优”，从而优化模型参数。
+        num_generations=8 
     )
     
     # 将包含奖励系统的强化微调触发投递出去

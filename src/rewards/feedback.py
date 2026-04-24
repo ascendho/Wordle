@@ -1,4 +1,3 @@
-# Reward function that checks if the guess uses the previous feedback for its next guess
 def uses_previous_feedback(prompt: str, completion: str, example: dict) -> float:
     """
     奖励函数：评估模型是否在下次猜测中合理利用了之前的 Wordle 线索反馈。
