@@ -8,9 +8,9 @@ def main():
     parser.add_argument(
         "--run", 
         type=str, 
-        choices=["data", "train", "eval"], 
+        choices=["data", "train", "benchmark"], 
         required=True,
-        help="要运行的流水线阶段：准备目标数据, 执行训练, 或运行评估基准。"
+        help="要运行的流水线阶段：准备目标数据、执行训练，或运行基准测试。"
     )
     
     # 针对训练阶段，指定训练类型
@@ -22,12 +22,32 @@ def main():
         help="具体的训练执行类型（仅在 --run train 时生效）。可以选择 sft, grpo 或联合的 sftgrpo。"
     )
     
-    # 针对继续训练与评估阶段的模型版本标识
+    # 针对继续训练与基准测试阶段的模型版本标识
     parser.add_argument(
         "--adapter", 
         type=str, 
         default="wordle/1",
-        help="要评估或作为基座使用的适配器/模型版本号 (例如 wordle/1)"
+        help="要用于基准测试或作为继续训练基座使用的适配器/模型版本号 (例如 wordle/1)"
+    )
+
+    # 针对基准测试阶段的采样与规模参数（仅在 --run benchmark 时生效）
+    parser.add_argument(
+        "--num-games",
+        type=int,
+        default=10,
+        help="基准测试时进行的完整 Wordle 对局数量（每局最多 6 次猜测）。"
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.7,
+        help="基准测试时模型生成的采样温度，实验证明 0.7 在该任务上表现较好。"
+    )
+    parser.add_argument(
+        "--max-new-tokens",
+        type=int,
+        default=512,
+        help="基准测试时单次生成的最大 token 数，避免 <think> 思考链被截断。"
     )
 
     args = parser.parse_args()
@@ -49,24 +69,29 @@ def main():
     elif args.run == "train":
         if args.type == "sft":
             # 运行监督微调 (Supervised Fine-Tuning)
-            from train.sft import run_sft_training
+            from src.train.sft import run_sft_training
             run_sft_training()
             
         elif args.type == "grpo":
             # 运行生成式奖励策略优化 (Generative Reward Policy Optimization)
-            from train.grpo import run_grpo_training
+            from src.train.grpo import run_grpo_training
             run_grpo_training()
             
         elif args.type == "sftgrpo":
             # 基于已有的 SFT 模型版本继续运行 GRPO
-            from train.sftgrpo import run_sft_grpo_training
+            from src.train.sftgrpo import run_sft_grpo_training
             run_sft_grpo_training(sft_version=args.adapter)
 
-    # 3. 模型评估分支
-    elif args.run == "eval":
-        # 运行评估或推理验证，测试模型的破题准确率与平均猜测次数
-        from eval.evaluate import run_evaluation
-        run_evaluation(adapter_id=args.adapter)
+    # 3. 模型基准测试分支
+    elif args.run == "benchmark":
+        # 运行完整 Wordle 对局基准测试，统计通关数与获胜局平均猜测次数
+        from benchmark.benchmark_runner import run_benchmark
+        run_benchmark(
+            adapter_id=args.adapter,
+            num_games=args.num_games,
+            temperature=args.temperature,
+            max_new_tokens=args.max_new_tokens,
+        )
 
 if __name__ == "__main__":
     main()
