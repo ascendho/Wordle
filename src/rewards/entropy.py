@@ -15,11 +15,22 @@ def _validate_guess(secret: str, guess: str, raw_feedback: bool = False):
 	1. 第一遍先处理绿色命中，优先锁定“字母和位置都正确”的格子。
 	2. 第二遍再处理黄色/灰色，借助被置空的 `secret_list` 正确处理重复字母。
 
+	示例：
+	- secret="ROBOT", guess="BOOST"
+	- 第一遍先锁定位置完全正确的字母，例如第 2 位的 "O" 会直接记为绿色，
+	  同时把 secret_list 中对应位置置空，表示这个字母库存已经被消费。
+	- 第二遍再看其余位置：如果某个字母还能在剩余库存里找到，就记为黄色；
+	  如果已经找不到，就记为灰色。
+	- 这种写法的关键价值，是能避免重复字母被错误地多次判成黄色。
+
 	raw_feedback=True 时返回逐位置列表，便于后续进一步编码；否则返回训练数据同款字符串。
 	"""
 	feedback = []
 	secret_list = list(secret)
 
+	# Pass 1: 先锁定绿色命中。
+	# 一旦某个位置已经完全匹配，就把 secret_list 对应位置置为 None，
+	# 这样 Pass 2 在处理黄色时就不会把同一个字母库存重复消费。
 	for i, (g_char, s_char) in enumerate(zip(guess, secret)):
 		if g_char == s_char:
 			feedback.append(f"{g_char}(✓) ")
@@ -27,6 +38,8 @@ def _validate_guess(secret: str, guess: str, raw_feedback: bool = False):
 		else:
 			feedback.append(None)
 
+	# Pass 2: 只处理那些还没有被判成绿色的位置。
+	# 此时 secret_list 中剩余的非 None 元素，表示“还可以拿来匹配黄色”的字母库存。
 	for i, g_char in enumerate(guess):
 		if feedback[i] is None:
 			if g_char in secret_list:
@@ -70,6 +83,7 @@ def _compute_normalized_information_gain(all_candidate_words, past_guesses, gues
 	额外返回的 `normalized_max_gain` 是理论上某个单一反馈分支能带来的最大归一化收益，
 	当前训练没有直接使用，但保留下来便于后续分析或扩展奖励设计。
 	"""
+	# 先用历史反馈把明显不可能的词过滤掉，得到“当前局面下仍可作为答案”的候选空间。
 	candidates = _filter_candidates(all_candidate_words, past_guesses)
 	total_candidates = len(candidates)
 	if total_candidates == 0:
@@ -82,6 +96,8 @@ def _compute_normalized_information_gain(all_candidate_words, past_guesses, gues
 		feedback = _validate_guess(word, guess, raw_feedback=True)
 		# 为了只关心反馈结构而非具体字母，这里把绿色/黄色/灰色压缩编码成 1/0/x。
 		# 同一模式下的候选词会落入同一个桶，它们对应“模型观察到相同反馈后仍无法区分”的剩余空间。
+		# 例如：两个不同答案如果都会对当前 guess 产生 "10x0x" 这样的模式，
+		# 那么从信息论角度看，它们对“这一步能减少多少不确定性”的贡献是同一类事件。
 		feedback_pattern = "".join(
 			"1" if "✓" in fb else ("0" if "-" in fb else "x")
 			for fb in feedback
@@ -100,6 +116,9 @@ def _compute_normalized_information_gain(all_candidate_words, past_guesses, gues
 		max_info_gain = max(max_info_gain, info_gain)
 
 	# 期望收益反映“平均而言，这个猜词能把搜索空间压缩多少”。
+	# 把 expected_gain 再除以 current_entropy，有两个好处：
+	# 1. 不同局面下的奖励被拉回到相近量级，便于 RL 阶段稳定比较；
+	# 2. 分数更容易解释：0 表示几乎没缩小搜索空间，越接近 1 表示越接近理想分裂。
 	expected_gain = current_entropy - expected_entropy
 	normalized_expected_gain = expected_gain / current_entropy if current_entropy > 0 else 0.0
 	normalized_max_gain = max_info_gain / current_entropy if current_entropy > 0 else 0.0
@@ -133,6 +152,8 @@ def guess_value(prompt: str, completion: str, example: dict) -> float:
 			return 0.0
 
 		past_guess_history = ast.literal_eval(example["past_guess_history"])
+		# 这里不直接奖励“是否猜中答案”，而是奖励“这一步平均能带来多少候选空间压缩”。
+		# 这样做的目的，是让模型学会在中前期优先选择高价值探索，而不是只盯着局部命中。
 		normalized_expected_gain, _ = _compute_normalized_information_gain(
 			word_list["Word"].values,
 			past_guess_history,

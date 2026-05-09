@@ -66,6 +66,9 @@ def uses_previous_feedback(prompt: str, completion: str, example: dict) -> float
 		# - 绿色字母保持在正确位置是最可靠的行为，每次 +0.2
 		# - 黄色字母换到新位置是合理探索，每次 +0.1
 		# - 完全不受约束的新字母给 +0.05，鼓励在安全前提下扩大信息覆盖面
+		# 这些系数在当前项目里更像“策略强弱顺序”的工程表达：
+		# 我们不是严格拟合一个理论最优分值，而是希望 RL 明确区分“强违例”和“弱违例”。
+		# 因此，复用灰色字母会被重罚，复用绿色位置会被显著奖励，其余行为落在中间区间。
 		for idx, letter in enumerate(guess):
 			if letter in correct_letter_to_position and idx in correct_letter_to_position[letter]:
 				reward += 0.2

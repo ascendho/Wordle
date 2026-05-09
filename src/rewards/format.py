@@ -27,6 +27,8 @@ def output_format_check(prompt: str, completion: str, example: dict) -> float:
 
 		# 该正则要求输出严格是两段结构：一个 think 块，下一行紧接一个 guess 块。
 		# 其中 think 块内部允许普通文本和非 think 标签字符，但不允许再次嵌套 think。
+		# 这里故意把格式卡得比较严，因为这个奖励函数承担的是“结构兜底”角色：
+		# 只有先保证输出能被稳定解析，后续的反馈一致性和信息增益奖励才有意义。
 		regex = (
 			r"^<think>\s*([^<]*(?:<(?!/?think>)[^<]*)*)\s*<\/think>\n"
 			r"<guess>\s*([\s\S]*?)\s*<\/guess>$"
@@ -41,6 +43,8 @@ def output_format_check(prompt: str, completion: str, example: dict) -> float:
 			return 0.1
 
 		# 只有落在词表中的五字母词才被视为真正可执行的猜测。
+		# 这也是为什么“合法词但没猜中”和“压根不是词表中的词”要分开给分：
+		# 前者仍然是一个有效游戏动作，后者则连环境都无法接受。
 		word_list = pd.read_csv(str(example["word_list"]))
 		if guess not in word_list["Word"].values:
 			return 0.5
