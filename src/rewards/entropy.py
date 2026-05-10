@@ -91,6 +91,19 @@ def _compute_normalized_information_gain(all_candidate_words, past_guesses, gues
 
 	# 当前熵代表“在不知道下一次反馈前，我们对答案还剩多少不确定性”。
 	current_entropy = math.log2(total_candidates)
+	# Worked Example:
+	# - 假设当前没有历史约束，剩余候选词只有 ["CRANE", "SLATE", "SHINE"] 这 3 个。
+	# - 那么 current_entropy = log2(3) ≈ 1.585，表示我们还需要约 1.585 bit 信息才能唯一确定答案。
+	# - 如果当前 guess = "SLATE"，那么它对三个候选词会产生三种不同反馈：
+	#   1) secret="CRANE" -> pattern "xx1x1"
+	#   2) secret="SLATE" -> pattern "11111"
+	#   3) secret="SHINE" -> pattern "1xxx1"
+	# - 三个 candidate 全都落入不同 bucket，说明这次猜测能把剩余搜索空间完全切开。
+	# - 每个 bucket 里都只剩 1 个词，所以分支熵都是 log2(1)=0，expected_entropy 也就是 0。
+	# - 因此 expected_gain = current_entropy - expected_entropy = 1.585，
+	#   normalized_expected_gain = 1.585 / 1.585 = 1.0。
+	# 这个例子想说明：如果一个 guess 能让不同候选词产生明显不同的反馈模式，
+	# 它就更像一个“高区分度探针”，即使这一步没有直接猜中答案，也值得拿到更高奖励。
 	feedback_groups = {}
 	for word in candidates:
 		feedback = _validate_guess(word, guess, raw_feedback=True)
