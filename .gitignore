@@ -41,3 +41,7 @@ MANIFEST
 .idea/
 *.swp
 *.swo
+
+# Local-only interview docs
+docs/interview-qa.md
+docs/interview-project-walkthrough.md
